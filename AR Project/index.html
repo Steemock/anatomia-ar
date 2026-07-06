@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>AR Анатомия - спланхнология</title>
+
+  <script>
+    (function() {
+      const url = new URL(window.location.href);
+      const hasOrg = url.searchParams.has('org');
+      
+      // Если нет параметра org и это не страница home
+      if (!hasOrg && !window.location.pathname.includes('/home')) {
+        window.location.href = '/home';
+      }
+    })();
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; width: 100%; font-family: 'Inter', sans-serif; background-color: #0a0f1c; }
+    model-viewer { width: 100%; height: 100%; background-color: #0a0f1c; touch-action: pan-x pan-y; }
+
+    .info-card {
+      position: absolute;
+      bottom: 120px;
+      left: 20px;
+      right: 20px;
+      background: rgba(20, 28, 40, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      padding: 16px 20px;
+      border: 1px solid rgba(66, 153, 225, 0.4);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .info-card h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 6px; background: linear-gradient(135deg, #fff 0%, #90cdf4 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .info-card .latin { font-size: 0.8rem; color: #90cdf4; opacity: 0.8; margin-bottom: 10px; font-weight: 500; }
+    .divider { height: 2px; background: linear-gradient(90deg, #4299e1, transparent); margin: 10px 0 12px 0; width: 40px; }
+    .info-card p { font-size: 0.85rem; line-height: 1.4; color: #e2e8f0; }
+    .tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .tag { background: rgba(66, 153, 225, 0.2); padding: 4px 10px; border-radius: 30px; font-size: 0.7rem; font-weight: 500; color: #90cdf4; border: 0.5px solid rgba(66,153,225,0.5); }
+
+    .ar-button {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      border-radius: 60px;
+      padding: 16px 20px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+      z-index: 20;
+    }
+    .ar-button:active { transform: scale(0.97); }
+
+    @media (min-width: 768px) {
+      .info-card { left: 40px; right: auto; bottom: 120px; max-width: 320px; }
+      .ar-button { left: 40px; right: auto; width: auto; padding: 16px 32px; min-width: 240px; }
+    }
+  </style>
+</head>
+<body>
+
+  <model-viewer 
+    id="ar-model"
+    src=""
+    alt="3D модель анатомической структуры"
+    ar 
+    ar-modes="webxr scene-viewer quick-look"
+    camera-controls 
+    auto-rotate
+    environment-image="neutral"
+    scale="0.09 0.09 0.09"
+    shadow-intensity="0.4"
+    exposure="1.2"
+    style="width:100%; height:100%;"
+  >
+    <button slot="ar-button" class="ar-button">
+      <span>🔍</span> 
+      <span>Смотреть в AR</span>
+    </button>
+  </model-viewer>
+
+  <div class="info-card" id="info-card">
+    <h2 id="organ-name">Загрузка...</h2>
+    <div class="latin" id="organ-latin"></div>
+    <div class="divider"></div>
+    <p id="organ-description"></p>
+    <div class="tags" id="organ-tags"></div>
+  </div>
+
+  <script>
+    // База данных органов
+    const organs = {
+      stomach: {
+        name: "Желудок",
+        latin: "Gaster, Ventriculus",
+        description: "Полый мышечный орган, расположенный в верхней части брюшной полости. Служит резервуаром для пищи, где происходит её химическая и механическая обработка. Объём пустого желудка около 0,5 л, растягивается до 3–4 л.",
+        tags: ["🥣 Резервуар", "🧪 Желудочный сок", "🔄 Перистальтика"],
+        model: "mods/stomach.glb"
+      },
+      liver: {
+        name: "Печень",
+        latin: "Hepar",
+        description: "Крупнейшая железа организма (до 1,5 кг). Расположена в правом подреберье. Выполняет более 500 функций: детоксикация, синтез белков, образование желчи, депо гликогена.",
+        tags: ["🧪 Детоксикация", "🟡 Желчеобразование", "⚡ Регенерация"],
+        model: "mods/liver.glb"
+      },
+      pancreas: {
+        name: "Поджелудочная железа",
+        latin: "Pancreas",
+        description: "Расположена позади желудка на задней брюшной стенке. Выполняет экзокринную (панкреатический сок) и эндокринную (инсулин, глюкагон) функции.",
+        tags: ["🩸 Инсулин", "🧪 Панкреатический сок", "📐 Головка, тело, хвост"],
+        model: "mods/pancreas.glb"
+      },
+      small_intestine: {
+        name: "Тонкая кишка",
+        latin: "Intestinum tenue",
+        description: "Самый длинный отдел пищеварительного тракта (4–6 м). Состоит из двенадцатиперстной, тощей и подвздошной кишки. Здесь происходит основное всасывание питательных веществ.",
+        tags: ["🔄 Всасывание", "📏 4–6 метров", "🏆 Ворсинки"],
+        model: "mods/small_intestine.glb"
+      },
+      large_intestine: {
+        name: "Толстая кишка",
+        latin: "Intestinum crassum",
+        description: "Конечный отдел пищеварительного тракта (1,5 м). Включает слепую, ободочную и прямую кишку. Всасывает воду и формирует каловые массы.",
+        tags: ["💧 Всасывание воды", "📦 Формирование кала", "🦠 Микробиота"],
+        model: "mods/large_intestine.glb"
+      },
+      lung: {
+        name: "Лёгкое",
+        latin: "Pulmo",
+        description: "Парный орган дыхания. Правое лёгкое состоит из трёх долей, левое — из двух. Обеспечивает газообмен: насыщение крови кислородом и удаление углекислого газа.",
+        tags: ["🌬️ Газообмен", "🫁 Альвеолы", "🔴 Правое > левого"],
+        model: "mods/lung.glb"
+      },
+      larynx: {
+        name: "Гортань",
+        latin: "Larynx",
+        description: "Отдел дыхательной системы между глоткой и трахеей. Участвует в дыхании, глотании и голосообразовании. Содержит голосовые связки.",
+        tags: ["🗣️ Голосообразование", "🛡️ Щитовидный хрящ", "🎵 Голосовые связки"],
+        model: "mods/larynx.glb"
+      },
+      trachea: {
+        name: "Трахея и бронхи",
+        latin: "Trachea et bronchi",
+        description: "Трахея (11–13 см) начинается от гортани и делится на два главных бронха. Бронхи ветвятся, образуя бронхиальное дерево, по которому воздух поступает в альвеолы.",
+        tags: ["🌳 Бронхиальное дерево", "🔄 Хрящевые кольца", "💨 Воздухоносные пути"],
+        model: "mods/trachea.glb"
+      },
+      kidney: {
+        name: "Почка",
+        latin: "Ren",
+        description: "Парный орган мочевыделительной системы (10–12 см). Фильтрует кровь, выводит токсины, регулирует водно-солевой баланс. В сутки образует 1,5–2 л мочи.",
+        tags: ["💧 Фильтрация", "⚖️ Гомеостаз", "🫘 Бобовидная форма"],
+        model: "mods/kidney.glb"
+      },
+      bladder: {
+        name: "Мочевой пузырь",
+        latin: "Vesica urinaria",
+        description: "Полый мышечный орган в малом тазу. Накопление мочи (300–500 мл). Стенка содержит детрузор, а в области шейки — сфинктеры.",
+        tags: ["🧴 Накопление мочи", "🚽 Детрузор", "🔘 Сфинктеры"],
+        model: "mods/bladder.glb"
+      },
+      uterus: {
+        name: "Матка с трубами и яичниками",
+        latin: "Uterus, tubae uterinae et ovarii",
+        description: "Центральный орган женской репродуктивной системы. Расположена в малом тазу. В матке происходит имплантация и развитие плода. Маточные трубы — путь для яйцеклетки, яичники — место созревания яйцеклеток.",
+        tags: ["🌸 Имплантация", "🥚 Овуляция", "🔗 Связочный аппарат"],
+        model: "mods/uterus.glb"
+      },
+      kidney_adrenal: {
+        name: "Почка и надпочечник",
+        latin: "Ren et glandula suprarenalis",
+        description: "Почка фильтрует кровь. Надпочечник — парная эндокринная железа, расположенная над верхним полюсом почки. Вырабатывает адреналин, кортизол, альдостерон.",
+        tags: ["💧 Фильтрация", "⚡ Стресс-гормоны", "🧂 Альдостерон"],
+        model: "mods/kidney_adrenal.glb"
+      }
+    };
+
+    // параметр org из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let orgId = urlParams.get('org');
+    
+    // по умолчанию
+    if (!orgId || !organs[orgId]) {
+      orgId = 'stomach';
+    }
+    
+    const data = organs[orgId];
+    
+    // обнова страницы
+    document.getElementById('organ-name').textContent = data.name;
+    document.getElementById('organ-latin').textContent = data.latin;
+    document.getElementById('organ-description').textContent = data.description;
+    
+    const tagsContainer = document.getElementById('organ-tags');
+    tagsContainer.innerHTML = '';
+    data.tags.forEach(tag => {
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.textContent = tag;
+      tagsContainer.appendChild(span);
+    });
+    
+    // установка модели
+    const modelViewer = document.getElementById('ar-model');
+    modelViewer.setAttribute('src', data.model);
+    
+    // заголовок страницы
+    document.title = `AR Анатомия - ${data.name}`;
+  </script>
+</body>
+</html>
